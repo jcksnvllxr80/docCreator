@@ -1,0 +1,1127 @@
+ <!--
+Aaron Watkins (ACW) 03-03-2014
+Doc Creator will create a binder cover, program checklist and blank program notes document with header. 
+This porgram also creates an excel file with the information that was entered into the fields. This file
+can then be used to fill out the fields faster for the next programmer who needs to make documents for a
+location in the same job number.
+-->
+
+<HTML>
+	<HEAD>
+		<TITLE>XORAIL: Binder Documents Generator</TITLE>
+		<HTA:APPLICATION ID="oHTA"
+		 APPLICATIONNAME="Binder Documents Generator"
+		 BORDER="thin"
+		 BORDERSTYLE="thin"
+		 CAPTION="yes"
+		 ICON="P:\Designer\Aaron\docCreator\Xorail Earth.ico"
+		 MAXIMIZEBUTTON="yes"
+		 MINIMIZEBUTTON="yes"
+		 SHOWINTASKBAR="yes"
+		 SINGLEINSTANCE="no"
+		 SYSMENU="yes"
+		 VERSION="1.0"
+		 WINDOWSTATE="normal"
+		 SCROLL="no"/>
+
+		<SCRIPT LANGUAGE=VBScript>  
+			
+			DocCreatorDir = "P:\Designer\Aaron\docCreator\"
+			Dim saveDir
+			Dim loc
+			Dim infoWorksheetFound
+			Dim InfoWorksheetSaveDir
+			Dim excelSheet
+			winY=750
+			winX=515
+			DriveLetter = "P:"
+			firstLoadComplete = 0
+			Dim exeOpened
+			Dim xrlFolder
+			Dim xrlFolderFound
+			Dim readFromFile
+			Dim saveDirFound
+			UserRailroad = "CSX"
+			windows10 = 0
+			 
+			sub Main()	
+				If InStr(userselections.location.Value,"\") or InStr(userselections.location.Value,"/") Then
+					MsgBox("NO BACKSLASH or FORWARDSLASH can be used in the location name. Please fix the name and try again.")
+					Exit Sub
+				End If
+				
+				'set printer to use - script will restore previous default printer selections
+				win10printerAddressAdditionStr = ".ad.wabtec.com"
+				'printerNameStr = "\XJAPRT0020 - 4th Floor West - Xerox WorkCentre 7970 PCL6 on XJASRV0001" 	
+				printerNameStr = "\XJAPRT0019 - 4th Floor East - Xerox WorkCentre 7970 PCL6 on XJASRV0001" 	
+				If windows10 And userselections.prgrmrName.value = "Aaron Watkins" Then
+					sPrinter = "\\XJASRV0001" & win10printerAddressAdditionStr & printerNameStr
+				Else
+					sPrinter = "\\XJASRV0001" & printerNameStr
+				End If
+				
+				Set fso = CreateObject("Scripting.FileSystemObject")
+				Set objTxtArea = window.document.getElementById("StatusMsg")
+				saveDir = userselections.destinationPath.value
+				
+				Set objFSO = CreateObject("Scripting.FileSystemObject")
+					If Not objFSO.FileExists(userselections.destinationPath.value & "\" & "RunDocCreator.exe") Then
+						objFSO.CopyFile DocCreatorDir & "RunDocCreator.exe", userselections.destinationPath.value & "\" & "RunDocCreator.exe"
+					End If
+				Set objFSO = Nothing
+				
+				If readFromFile = 1 Then
+					If fso.FileExists(excelSheet) Then
+						Set objExcel = CreateObject("Excel.Application")
+						objExcel.Visible = False
+						Set excelInput = objExcel.Workbooks.Open(excelSheet)
+						
+						with userselections
+							'.prgrmrName.value = excelInput.Sheets("Sheet1").Cells(1, 2)
+							'.location.value = excelInput.Sheets("Sheet1").Cells(2, 2)
+							.milePost.value = "" 'excelInput.Sheets("Sheet1").Cells(3, 2)
+							.xrlNum.value = excelInput.Sheets("Sheet1").Cells(4, 2)
+							.railroadNum.value = excelInput.Sheets("Sheet1").Cells(5, 2)
+							.division.value = excelInput.Sheets("Sheet1").Cells(6, 2)
+							.subdivision.value = excelInput.Sheets("Sheet1").Cells(7, 2)
+							'.boxType.value = excelInput.Sheets("Sheet1").Cells(8, 2)
+							.subDivAbrv.value = excelInput.Sheets("Sheet1").Cells(9, 2)
+							.rrEngnr.value = excelInput.Sheets("Sheet1").Cells(10, 2)
+							.designer.value = excelInput.Sheets("Sheet1").Cells(11, 2)
+							.sigRules.value = excelInput.Sheets("Sheet1").Cells(12, 2)
+							.prgrmrInitials.value = "" 'excelInput.Sheets("Sheet1").Cells(13, 2)
+							'.startDate.value = "" 'excelInput.Sheets("Sheet1").Cells(14, 2)
+							.state.value = excelInput.Sheets("Sheet1").Cells(15, 2)
+							'.destinationPath.value = excelInput.Sheets("Sheet1").Cells(16, 2)
+							If excelInput.Sheets("Sheet1").Cells(17, 2) = "CSX" Then
+								.Railroad(0).click
+							Else
+								.Railroad(1).click							
+							End If
+							'If excelInput.Sheets("Sheet1").Cells(18, 2) = "1" Then
+							'	.rtvCheckBox.click						
+							'End If
+							.city.value = excelInput.Sheets("Sheet1").Cells(1, 4)
+							.JobID.value = excelInput.Sheets("Sheet1").Cells(6, 4)
+							If not (.JobID.value = "" Or .JobID.value = "Tracking JobID") Then
+								userselections.TrackingBttn.disabled = False
+							End If
+							'.logicStationVersion.value = excelInput.Sheets("Sheet1").Cells(2, 4)
+							
+							prgName = .prgrmrName.value
+							'loc = .location.value
+							mPost = .milePost.value
+							xrl = .xrlNum.value
+							RR = .railroadNum.value
+							dvsn = .division.value
+							sdvsn = .subdivision.value
+							equipType = .boxType.value
+							subdvsnAbrv = .subDivAbrv.value
+							rrEngineer = .rrEngnr.value
+							dsgnr = .designer.value
+							signalRules = .sigRules.value
+							prgInitials = .prgrmrInitials.value
+							strtDate = .startDate.value
+							st = .state.value
+							job_id = .JobID.value
+						End With
+						
+						objExcel.Application.Quit
+						Set objExcel = Nothing
+						objTxtArea.Value = objTxtArea.Value & "Location info imported successfully." & VbCrLf
+						objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+					End If	
+				ElseIf readFromFile = 2 Then
+					If fso.FileExists(excelSheet) Then
+						Set objExcel = CreateObject("Excel.Application")
+						objExcel.Visible = False
+						Set excelInput = objExcel.Workbooks.Open(excelSheet)
+						
+						with userselections
+							'.prgrmrName.value = excelInput.Sheets("Sheet1").Cells(1, 2)
+							.location.value = excelInput.Sheets("Sheet1").Cells(2, 2)
+							.milePost.value = excelInput.Sheets("Sheet1").Cells(3, 2)
+							.xrlNum.value = excelInput.Sheets("Sheet1").Cells(4, 2)
+							.railroadNum.value = excelInput.Sheets("Sheet1").Cells(5, 2)
+							.division.value = excelInput.Sheets("Sheet1").Cells(6, 2)
+							.subdivision.value = excelInput.Sheets("Sheet1").Cells(7, 2)
+							.boxType.value = excelInput.Sheets("Sheet1").Cells(8, 2)
+							.subDivAbrv.value = excelInput.Sheets("Sheet1").Cells(9, 2)
+							.rrEngnr.value = excelInput.Sheets("Sheet1").Cells(10, 2)
+							.designer.value = excelInput.Sheets("Sheet1").Cells(11, 2)
+							.sigRules.value = excelInput.Sheets("Sheet1").Cells(12, 2)
+							.prgrmrInitials.value = excelInput.Sheets("Sheet1").Cells(13, 2)
+							.startDate.value = excelInput.Sheets("Sheet1").Cells(14, 2)
+							.state.value = excelInput.Sheets("Sheet1").Cells(15, 2)
+							'.destinationPath.value = excelInput.Sheets("Sheet1").Cells(16, 2)
+							If excelInput.Sheets("Sheet1").Cells(17, 2) = "CSX" Then
+								.Railroad(0).click
+							Else
+								.Railroad(1).click							
+							End If
+							If excelInput.Sheets("Sheet1").Cells(18, 2) = "1" Then
+								.rtvCheckBox.click						
+							End If
+							.city.value = excelInput.Sheets("Sheet1").Cells(1, 4)
+							.logicStationVersion.value = excelInput.Sheets("Sheet1").Cells(2, 4)
+							.JobID.value = excelInput.Sheets("Sheet1").Cells(6, 4)
+							If not (.JobID.value = "" Or .JobID.value = "Tracking JobID") Then
+								userselections.TrackingBttn.disabled = False
+							End If
+							
+							prgName = .prgrmrName.value
+							loc = .location.value
+							mPost = .milePost.value
+							xrl = .xrlNum.value
+							RR = .railroadNum.value
+							dvsn = .division.value
+							sdvsn = .subdivision.value
+							equipType = .boxType.value
+							subdvsnAbrv = .subDivAbrv.value
+							rrEngineer = .rrEngnr.value
+							dsgnr = .designer.value
+							signalRules = .sigRules.value
+							prgInitials = .prgrmrInitials.value
+							strtDate = .startDate.value
+							st = .state.value
+							job_id = .JobID.value
+						End With
+						
+						objExcel.Application.Quit
+						Set objExcel = Nothing
+						objTxtArea.Value = objTxtArea.Value & "Location info imported successfully." & VbCrLf
+						objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+					End If
+				ElseIf Not fso.FolderExists(saveDir) Then
+					objTxtArea.Value = objTxtArea.Value & "Enter Valid Destination Path." & VbCrLf
+					objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+				Else
+					Set objExcel = CreateObject("Excel.Application")
+					objExcel.Visible = False
+					Set excelInput = objExcel.Workbooks.Open(DocCreatorDir & "infoWorksheet.xlsm")
+					
+					With userselections
+						prgName = .prgrmrName.value
+						loc = .location.value
+						mPost = .milePost.value
+						xrl = .xrlNum.value
+						RR = .railroadNum.value
+						dvsn = .division.value
+						sdvsn = .subdivision.value
+						equipType = .boxType.value
+						subdvsnAbrv = .subDivAbrv.value
+						rrEngineer = .rrEngnr.value
+						dsgnr = .designer.value
+						signalRules = .sigRules.value
+						prgInitials = .prgrmrInitials.value
+						strtDate = .startDate.value
+						st = .state.value
+						job_id = .JobID.value
+					End With
+					
+					With excelInput.Sheets("Sheet1")
+						.Cells(1, 2) = prgName
+						.Cells(2, 2) = loc
+						.Cells(3, 2) = mPost
+						.Cells(4, 2) = xrl
+						.Cells(5, 2) = RR
+						.Cells(6, 2) = dvsn
+						.Cells(7, 2) = sdvsn
+						.Cells(8, 2) = equipType
+						.Cells(9, 2) = subdvsnAbrv
+						.Cells(10, 2) = rrEngineer
+						.Cells(11, 2) = dsgnr
+						.Cells(12, 2) = signalRules
+						.Cells(13, 2) = prgInitials
+						.Cells(14, 2) = strtDate
+						.Cells(15, 2) = st
+						.Cells(16, 2) = userselections.destinationPath.value
+						If userselections.Railroad(0).checked Then
+							.Cells(17, 2) = "CSX"
+						Else
+							.Cells(17, 2) = "NS"
+						End If						
+						If userselections.rtvCheckBox.checked Then
+							.Cells(18, 2) = "1"
+						Else
+							.Cells(18, 2) = "0"
+						End If
+						.Cells(1, 4) = userselections.city.value
+						If userselections.boxType.value = "ElectroLogIXS" Or userselections.boxType.value = "EC5" Then
+							.Cells(2, 4) = userselections.logicStationVersion.value
+						Else
+							.Cells(2, 4) = ""
+						End If
+						.Cells(6, 4) = userselections.JobID.value
+					End With
+					
+					excelInput.Application.DisplayAlerts = False
+					Set objFSO = CreateObject("Scripting.FileSystemObject")
+					If (infoWorksheetFound = 0) Then
+						excelInput.SaveAs InfoWorksheetSaveDir & "\" & xrl & " info worksheet.xlsm"					
+						objFSO.CopyFile DocCreatorDir & "RunDocCreator.exe", userselections.destinationPath.value & "\" & "RunDocCreator.exe"
+					End If
+					excelInput.SaveAs userselections.destinationPath.value & "\" & loc & " info worksheet.xlsm"
+					objExcel.Application.Quit
+					Set objExcel = Nothing
+					Set objFSO = Nothing
+					
+					
+					If userselections.binderCover.checked Then     
+						'Start Binder Cover
+						Set objWord = CreateObject("Word.Application")
+						objWord.Visible = False	
+						Set binderCover = objWord.Documents.Open(DocCreatorDir & UserRailroad & " Binder Cover.doc")
+						
+						objTxtArea.Value = objTxtArea.Value & "Creating binder cover..." & VbCrLf
+						objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+						Delay(1)
+						
+						With binderCover
+							.locationSt.Caption = loc & ", " & UCase(st)
+							.locationSt1.Caption = loc & ", " & UCase(st)
+							.locationSt2.Caption = loc & ", " & UCase(st)
+							.locationSt3.Caption = loc & ", " & UCase(st)
+							.locationSt4.Caption = loc & ", " & UCase(st)
+
+							.milePost.Caption = "MP. " & UCase(mPost)
+							.milePost1.Caption = "MP. " & UCase(mPost)
+							.milePost2.Caption = "MP. " & UCase(mPost)
+							.milePost3.Caption = "MP. " & UCase(mPost)
+							.milePost4.Caption = "MP. " & UCase(mPost)
+
+							.boxType.Caption = equipType
+							.boxType1.Caption = equipType & " PROGRAMS"
+							.boxType2.Caption = equipType & " PROGRAMS"
+							.boxType3.Caption = equipType & " PROGRAMS"
+							.boxType4.Caption = equipType & " PROGRAMS"
+
+							.xrlNum.Caption = "XRL#: " & UCase(xrl)
+							.csxNum.Caption = UserRailroad & "#: " & UCase(RR)
+							.division.Caption = UCase(dvsn) & " DIVISION"
+							.subdivision.Caption = UCase(sdvsn) & " SUBDIVISION"
+
+							
+							' get current active printer
+							sActivePrinter = .Application.ActivePrinter 
+							' set active printer
+							
+							'On Error Resume Next
+							.Application.ActivePrinter = sPrinter 
+							'If Err Then
+							'	.Application.ActivePrinter = sPrinterWin10
+							'	Err.Clear								
+							'End If
+							
+							.PrintOut
+							' set current active printer back to original 
+							.Application.ActivePrinter = sActivePrinter
+							.SaveAs saveDir & "\" & loc & " " & UserRailroad & " Binder Cover.doc"
+						End With
+						objWord.Application.Quit
+						Set objWord = Nothing
+					End If
+				
+					If userselections.programmersNotes.checked Then
+						'Start Program Notes
+						Set objWord = CreateObject("Word.Application")
+						objWord.Visible = False
+						If fso.FileExists(saveDir & "\" & loc & " Program Notes.doc") Then
+							Set progNotes = objWord.Documents.Open(saveDir & "\" & loc & " Program Notes.doc")
+							Set objFile = fso.GetFile(saveDir & "\" & loc & " Program Notes.doc")
+						Else
+							Set progNotes = objWord.Documents.Open(DocCreatorDir & UserRailroad & " Program Notes.doc")
+							Set objFile = fso.GetFile(DocCreatorDir & UserRailroad & " Program Notes.doc")
+						End If
+						objTxtArea.Value = objTxtArea.Value & "Creating program notes..." & VbCrLf
+						objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+						Delay(1)
+						
+						With progNotes
+							.programmerName.Caption = "Programmer: " & prgName
+							.locationSt_milePost.Caption = loc & ", " & st & "  MP. " & mPost
+							.div_sub_subAbrv.Caption = dvsn & " DIVISION / " & sdvsn & " SUBDIVISION (" & subdvsnAbrv & ")"
+							.csxNum_xrlNum.Caption = UserRailroad & "#: " & RR & "; XRL#: " & xrl
+							'.TextBox1.Text = "Hello World"
+
+							If (fso.GetParentFolderName(objFile) = "P:\Designer\Aaron\docCreator") Then
+								.SaveAs saveDir & "\" & loc & " Program Notes.doc"
+							Else
+								.Save
+							End If
+							getSubDivFile
+						End With
+						objWord.Application.Quit
+						Set objFile = Nothing
+						Set objWord = Nothing
+					End If
+				
+					If userselections.programmingChecklist.checked Then
+					' Start Program Checklist
+						Set objWord = CreateObject("Word.Application")
+						objWord.Visible = False
+						If  userselections.rtvCheckBox.checked Then
+							Set checklist = objWord.Documents.Open(DocCreatorDir & UserRailroad & " RTV Program Checklist.doc")
+						Else
+							Set checklist = objWord.Documents.Open(DocCreatorDir & UserRailroad & " Program Checklist.doc")
+						End If
+						
+						objTxtArea.Value = objTxtArea.Value & "Creating program checklist..." & VbCrLf
+						objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+						Delay(1)
+						
+						With checklist
+							.csxNum_xrlNum.Caption = UserRailroad & "#: " & RR & "; XRL#: " & xrl
+							.locationSt.Caption = loc & ", " & st
+							.RR_Eng.Caption = rrEngineer
+							.designer.Caption = dsgnr
+							.sigRules.Caption = signalRules
+							.progInitials.Caption = prgInitials
+							.startDate.Caption = strtDate
+
+							' get current active printer 
+							sActivePrinter = .Application.ActivePrinter 
+							' set active printer 
+							
+							'On Error Resume Next
+							.Application.ActivePrinter = sPrinter 
+							'If Err Then
+							'	.Application.ActivePrinter = sPrinterWin10
+							'	Err.Clear								
+							'End If
+							
+							.PrintOut
+							' set current active printer back to original 
+							.Application.ActivePrinter = sActivePrinter
+							.SaveAs saveDir & "\" & loc & " Program Checklist.doc"
+						End With
+						objWord.Application.Quit
+						Set objWord = Nothing
+					End If
+					
+					objTxtArea.Value = objTxtArea.Value & "Finished." & VbCrLf
+					objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop	
+				End If 
+				document.title = "Doc Creator: " & userselections.xrlNum.value & " (" & userselections.location.value & ")"
+				
+				readFromFile = 0
+				Set fso = Nothing
+				Set objTxtArea = Nothing
+			End Sub
+
+
+			Function PickFolder(strStartDir)
+				Dim SA, F
+				Set SA = CreateObject("Shell.Application")
+				Set F = SA.BrowseForFolder(0, "Choose a folder", 0, strStartDir)
+				If (Not F Is Nothing) Then
+					PickFolder = F.Items.Item.path
+				Else
+					PickFolder = "No destination folder chosen."
+				End If
+				Set F = Nothing
+				Set SA = Nothing
+			End Function 
+
+
+			Sub ChooseSaveFolder
+				strStartDir = DriveLetter & "\"
+				userselections.destinationPath.value = PickFolder(strStartDir)
+				saveDir = userselections.destinationPath.value
+			End Sub 
+
+
+			Function PickFile(strStartDir)
+				Dim objExec, strMSHTA, wshShell
+				PickFile = ""
+				strMSHTA = "mshta.exe ""about:" & "<" & "input type=file id=FILE>" _
+						 & "<" & "script>FILE.click();new ActiveXObject('Scripting.FileSystemObject')" _
+						 & ".GetStandardStream(1).WriteLine(FILE.value);close();resizeTo(0,0);" & "<" & "/script>"""
+				Set wshShell = CreateObject( "WScript.Shell" )
+				Set objExec = wshShell.Exec( strMSHTA )
+				fileStr = objExec.StdOut.ReadLine( )
+				If Not (fileStr = "") Then
+					PickFile = fileStr
+					readFromFile = 1
+				Else
+					PickFile = "No info worksheet selected."
+				End If
+				Set objExec = Nothing
+				Set wshShell = Nothing
+			End Function 
+
+
+			Sub ChooseExcelInput
+				strStartDir = DriveLetter & "\"
+				userselections.txtFile1.value = PickFile(strStartDir)
+				excelSheet = userselections.txtFile1.value
+				If readFromFile = 1 Then
+					main()
+				End If
+			End Sub 
+
+			
+			Sub GetRailroad
+				For i = 0 To userselections.Railroad.length - 1
+					If userselections.Railroad(i).checked Then
+						UserRailroad = userselections.Railroad(i).value
+					End If
+				Next
+				PrevDestPath = userselections.destinationPath.value
+				TempDestPath = split(PrevDestPath, "\")
+				DestDepth = UBound(TempDestPath)
+				TempDestPath(1) = UserRailroad
+				NewDestPath = TempDestPath(0)
+				For i = 1 To DestDepth
+					NewDestPath = NewDestPath & "\" & TempDestPath(i)
+				Next
+				userselections.destinationPath.value = NewDestPath
+				If firstLoadComplete = 1 Then
+					CreateNewFolderSub(TempDestPath)
+				End If
+			End Sub
+			
+			
+			Sub CreateNewFolderSub(FolderInformationArray)
+				infoDepth = UBound(FolderInformationArray)
+				infoWorksheetFound = 0
+				saveDirFound = 0
+				xrlFolderFound = 0
+				saveDir = DoesFolderExist(FolderInformationArray, infoDepth)
+				If (firstLoadComplete = 0) And (saveDirFound = 0) Then
+					saveDir = saveDir & "\XRL"
+				End If
+				userselections.destinationPath.value = saveDir
+			End Sub
+			
+			
+			Function DoesFolderExist(dirPath, dirDepth)
+				Set fso = CreateObject("Scripting.FileSystemObject")
+				dirPathStr = DriveLetter
+				For i = 1 To dirDepth
+					dirPathStr = dirPathStr & "\" & dirPath(i)
+				Next
+				If Not fso.FolderExists(dirPathStr) Then
+					dummy = DoesFolderExist(dirPath, dirDepth - 1)
+					If dirDepth < 5 Then
+						fso.CreateFolder dirPathStr
+					End If
+					If dirDepth = 4 Then
+						'copy the Location Name folder and rename the copy to the name of the Location
+						Set f = fso.GetFolder(UserRailroad & "_Template\Location name (duplicate this folder as needed)")
+						Set subFldrs = f.SubFolders
+						For Each subF in subFldrs
+							fso.CopyFolder fso.GetAbsolutePathName(subF), dirPathStr & "\" & subF.name
+						Next
+						userselections.location.value = loc 'dirPath(dirDepth)
+					ElseIf dirDepth = 3 Then
+						'copy Template folder from DocCreator Directory into the Job Year and Rename it to the Job Number
+						InfoWorksheetSaveDir = dirPathStr
+						Set f = fso.GetFolder(UserRailroad & "_Template")
+						Set subFldrs = f.SubFolders
+						For Each subF in subFldrs
+							fso.CopyFolder fso.GetAbsolutePathName(subF), dirPathStr & "\" & subF.name
+						Next
+					End If
+				ElseIf dirDepth = 3 Then
+					InfoWorksheetSaveDir = dirPathStr
+					Set folder = fso.GetFolder(InfoWorksheetSaveDir)
+					For Each f in folder.Files
+						If (Right(f.Name, 19) = "info worksheet.xlsm") Then
+							excelSheet = InfoWorksheetSaveDir & "\" & f.Name
+							readFromFile = 1
+							main()
+							infoWorksheetFound = 1
+							Exit For
+						End If
+					Next
+				ElseIf dirDepth = 4 Then
+					userselections.location.value = loc 'dirPath(dirDepth)
+					InfoWorksheetSaveDir = dirPath(0) & "\" & dirPath(1) & "\" & dirPath(2) & "\" & dirPath(3)
+					Set f = fso.GetFolder(dirPathStr)
+					Set subFldrs = f.SubFolders
+					For Each subF in subFldrs
+						If (UCase(Left(subF.name, 3)) = "XRL") Then
+							xrlFolder = fso.GetAbsolutePathName(subF)
+							xrlFolderFound = 1
+							userselections.destinationPath.value = fso.GetAbsolutePathName(subF)
+							saveDirFound = 1
+							Set folder = fso.GetFolder(userselections.destinationPath.value)
+							For Each f in folder.Files
+								If (Right(f.Name, 19) = "info worksheet.xlsm") Then
+									excelSheet = fso.GetAbsolutePathName(subF) & "\" & f.Name
+									readFromFile = 2
+									main()
+									infoWorksheetFound = 2
+									Exit For
+								End If
+							Next
+						End If
+					Next
+					If infoWorksheetFound = 0 Then
+						Set folder = fso.GetFolder(InfoWorksheetSaveDir)
+						For Each f in folder.Files
+							If (Right(f.Name, 19) = "info worksheet.xlsm") Then
+								excelSheet = InfoWorksheetSaveDir & "\" & f.Name
+								readFromFile = 1
+								main()
+								infoWorksheetFound = 1
+								Exit For
+							End If
+						Next
+					End If
+				End If		
+				Set fso = Nothing
+				If saveDirFound = 1 Then
+					DoesFolderExist = userselections.destinationPath.value
+				Else
+					DoesFolderExist = dirPathStr
+				End If
+			End Function
+			
+			
+			Sub EmailCreation
+				Select Case userselections.mailType.value
+					Case 0
+						BlankEmail					
+					Case 1
+						NetID_Email
+					Case 2
+						InServiceSoftwareEmail
+					Case 3
+						P_HoursEmail
+					Case 4
+						PK_HoursEmail
+					Case 5
+						RTVPdistributionEmail
+					Case 6
+						PrelimSoftwareUploadedEmail
+					Case 7
+						FinalSoftwareUploadedEmail
+					Case else
+				End Select
+				If userselections.mailType.value > 4 Then
+					set objShell = CreateObject("Shell.Application")
+					iURL = "https://www.raildocs.net/CSXTrans/DgnProjTracking/ProjectSummaryReport/index.cgi/view?CSXProjNum=" & userselections.railroadNum.value
+					objShell.ShellExecute "chrome.exe", iURL, "", "", 1
+					'If userselections.mailType.value = 1 Then
+					'	iURL = "https://www.raildocs.net/CSXTrans/DgnProjTracking/EditProj.cgi?CSXProjNum=" & userselections.railroadNum.value & "#q=79"
+					'	objShell.ShellExecute "chrome.exe", iURL, "", "", 1
+					'End If
+					set objShell = Nothing
+				End If
+			End Sub
+			
+			
+			Sub BlankEmail
+				SubjectStr = ""
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr
+				TO_Recipients = ""
+				CC_Recipients = ""
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & userselections.location.value & " " & SubjectStr
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub NetID_Email
+				SubjectStr = " NET IDs."
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "I am programming " & userselections.location.value & ". This location will need unique NET IDs."
+				TO_Recipients = ""
+				CC_Recipients = "Holmes, Daryl (D.Holmes@xorail.com)"
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & userselections.location.value & " " & SubjectStr
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub RTVPdistributionEmail
+				SubjectStr = "– Review RTV"
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "The final software for " & userselections.location.value & " has been uploaded to RailDOCS under project " & userselections.railroadNum.value & _
+					". The RTVP document reflecting the changes made to the in-service software can be found on the testing tab of this job on RailDOCS." & _
+					" Please let me know if there are any questions or concerns."
+				TO_Recipients = "RTV_ServiceTest@csx.com; Russell Turner <precisionsignal@gmail.com>"
+				CC_Recipients = "Holmes, Daryl (D.Holmes@xorail.com); Jubin, Tom <T.Jubin@xorail.com>; Grote, Lucas <l.grote@xorail.com>"
+				Subject = userselections.railroadNum.value & ", " & userselections.location.value & " " & SubjectStr
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub InServiceSoftwareEmail
+				SubjectStr = "Field Verification of In-Service Software for "
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "An RTVP is required for " & userselections.location.value & ". In order to begin an RTVP, we need field verification of the in-service software" & _ 
+					". Will you please ask the field to provide this information?"
+				TO_Recipients = ""
+				CC_Recipients = "Holmes, Daryl (D.Holmes@xorail.com)"
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & SubjectStr & userselections.location.value
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub P_HoursEmail
+				SubjectStr = "Need Programming Hours for "
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "I need _________ programming (P) hours for " & userselections.location.value & ". The scope is _________ ."
+				TO_Recipients = "Holmes, Daryl (D.Holmes@xorail.com)"
+				'CC_Recipients = ""
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & SubjectStr & userselections.location.value
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub PK_HoursEmail
+				SubjectStr = "Need Programming Check Hours for "
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "I need _________ programming check (PK) hours for " & userselections.location.value & ". The scope is programming check (paper\simulation\final)."
+				TO_Recipients = "Holmes, Daryl (D.Holmes@xorail.com)"
+				'CC_Recipients = ""
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & SubjectStr & userselections.location.value
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub PrelimSoftwareUploadedEmail
+				SubjectStr = "Preliminary Software Uploaded to RailDOCS"
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "The preliminary software for " & userselections.location.value & " has been uploaded to RailDOCS under project " & userselections.railroadNum.value & _
+					". Please find attached the compare reports reflecting the changes made to the software. Please let me know if there are any questions or concerns."
+				TO_Recipients = ""
+				CC_Recipients = "Holmes, Daryl (D.Holmes@xorail.com)"
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & userselections.location.value & " " & SubjectStr
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub FinalSoftwareUploadedEmail
+				SubjectStr = "Final Software Uploaded to RailDOCS"
+				Body = vbTab & vbTab & vbTab & vbCr & userselections.location.value & vbCr & userselections.city.value & ", " & userselections.state.value & " / MP. " & userselections.milePost.value & vbCr & _
+					userselections.division.value & " Division / " & userselections.subdivision.value & " Subdivision" & vbCr & userselections.railroadNum.value & vbCr & _
+					userselections.xrlNum.value & vbCr & vbCr & "The final software for " & userselections.location.value & " has been uploaded to RailDOCS under project " & userselections.railroadNum.value & _
+					". Please find attached the compare reports reflecting the changes made to the software. Please let me know if there are any questions or concerns."
+				'TO_Recipients = ""
+				CC_Recipients = "Holmes, Daryl (D.Holmes@xorail.com); Jubin, Tom <T.Jubin@xorail.com>; Grote, Lucas <l.grote@xorail.com>"
+				Subject = UserRailroad & "#: " & userselections.railroadNum.value & "; XRL#: " & userselections.xrlNum.value & "; " & userselections.location.value & " " & SubjectStr
+				Recipients = Array(TO_Recipients, CC_Recipients)
+				TemplateData = Array(Subject, Body)
+				Call CreateEmail( Recipients, TemplateData )
+			End Sub
+			
+			
+			Sub CreateEmail(Recip, Template)
+				Set otlApp = CreateObject("Outlook.Application")
+				Set otlNewMail = otlApp.CreateItem(olMailItem)
+				Set WshShell = CreateObject("WScript.Shell")
+				With otlNewMail
+					.Subject = Template(0)
+					.Display
+					WshShell.AppActivate Template(0) & " - Message (HTML)"
+					.To = Recip(0)
+					.CC = Recip(1)
+					Set objDoc = otlApp.ActiveInspector.WordEditor
+		            Set objSel = objDoc.Windows(1).Selection
+		            objSel.InsertBefore(Template(1))
+				End With
+				Set WshShell = Nothing
+				Set otlNewMail = Nothing
+				Set otlApp = Nothing
+			End Sub
+			
+			
+			Function getDateString
+				If Len(Month(date)) = 1 Then
+					monthStr = "0" & Month(date)
+				Else
+					monthStr = Month(date)
+				End If
+				If Len(Day(date)) = 1 Then
+					dayStr = "0" & Day(date)
+				Else
+					dayStr = Day(date)
+				End If
+				getDateString = monthStr & "/" & dayStr & "/" & Year(date) 
+			End Function
+
+
+			Sub Window_onLoad
+				arrCommands = Split(oHTA.commandLine, chr(34))
+				For i = 3 to (Ubound(arrCommands) - 1) Step 2
+					exeOpened = arrCommands(i)
+				Next
+				windows10 = getOSVersion
+				window.resizeTo winX,winY
+				window.offscreenBuffering = True
+				Set objSysInfo = CreateObject("ADSystemInfo")
+				strUser = objSysInfo.UserName
+				Set objUser = GetObject("LDAP://" & strUser)
+				strFullName = Split(objUser.Get("displayName"),", ")
+				userselections.prgrmrName.value = strFullName(1) & " " & strFullName(0)
+				userselections.startDate.value = getDateString
+				userselections.destinationPath.value = DriveLetter & "\CSX"
+				FolderInfo = getFolderInfo()
+				CreateNewFolderSub(FolderInfo)
+				If UserRailroad = "CSX" Then
+					userselections.Railroad(0).click
+				Else
+					userselections.Railroad(1).click
+				End If
+				Delay(1)
+				'ChooseExcelInput
+				firstLoadComplete = 1	
+				If Not (exeOpened = 1) Then
+					Set objShell = CreateObject("Wscript.Shell")
+					objShell.Run "explorer.exe /e," & """" & userselections.destinationPath.value & """"
+					Set objShell = Nothing
+				End If
+				selectVisibility
+			End Sub
+			
+			
+			Function getOSVersion
+				strComputer = "."
+				Set objWMIService = GetObject("winmgmts:" & "{impersonationLevel=impersonate}!\\" & strComputer & "\root\cimv2")
+				Set colOperatingSystems = objWMIService.ExecQuery ("Select * from Win32_OperatingSystem")
+				For Each objOperatingSystem in colOperatingSystems
+					OSVersion = objOperatingSystem.Caption
+					If Left(OSVersion, 20) = "Microsoft Windows 10" Then
+						getOSVersion = 1
+					Else
+						getOSVersion = 0
+					End If
+				Next
+			End Function
+			
+			
+			Function getFolderInfo
+				result = MsgBox ("CSX Location?", vbYesNo, "Which Railroad?")
+				Select Case result
+				Case vbYes
+					UserRailroad = "CSX"
+				Case vbNo
+					UserRailroad = "NS"
+				End Select
+				i = 0
+				Do
+					FolderYear = InputBox("Enter the year of the job.", "Job Year?")
+					i = i + 1
+				Loop While FolderYear = "" And i < 4
+				i = 0
+				Do
+					FolderProjNum = InputBox("Enter the XRL#.", "Xorail Number?")
+					i = i + 1
+				Loop While FolderProjNum = "" And i < 4
+				i = 0
+				Do
+					FolderLocName = InputBox("Enter the location's folder name (NOT PATH).", "Location Folder Name?")
+					If FolderLocName <> "" Then
+						j = 0
+						Do
+							loc = InputBox("Enter the actual name of the location.", "Location Name?")
+							j = j + 1
+							If InStr(loc,"\") or InStr(loc,"/") Then
+								Do
+									loc = InputBox("Try again to enter the actual name of the location. NO BACKSLASH or FORWARDSLASH!", "Location Name?",loc)
+								Loop While InStr(loc,"\") or InStr(loc,"/")
+							End If
+						Loop While loc = "" And j < 4
+					End If
+					i = i + 1
+				Loop While FolderLocName = "" And i < 4
+				getFolderInfo = Array(DriveLetter, UserRailroad, FolderYear, FolderProjNum, FolderLocName)
+			End Function
+			
+			
+			Sub Delay( seconds )
+				Dim wshShell, strCmd
+				Set wshShell = CreateObject( "Wscript.Shell" )
+				strCmd = "%COMSPEC% /C (PING -n " & ( seconds ) & " 127.0.0.1 >NUL 2>&1 || PING -n " & seconds & " ::1 >NUL 2>&1)"
+				wshShell.Run strCmd, 0, 1
+				Set wshShell = Nothing
+			End Sub
+			
+			
+			Sub selectVisibility
+				If userselections.boxType.value="ElectroLogIXS" Or userselections.boxType.value="EC5" Then
+					userselections.logicStationVersion.style.visibility="visible"
+				Else
+					userselections.logicStationVersion.style.visibility="hidden"
+				End If
+			End Sub
+			
+			
+			Sub getSubDivFile
+								
+				subDivNameArray = Array("SYRACUSE TERMINAL", "ALBANY SPECIAL INSTRUCTIONS", "BALDWINSVILLE", "BELT", "BERKSHIRE", _
+					"BOSTON", "BUFFALO TERMINAL", "CARMAN", "CASTLETON", "FAIR GROUNDS", "FITCHBURG", "FRAMINGHAM", "FULTON", "HUDSON", "LOCKPORT", _
+					"MIDDLEBORO", "MOHAWK", "MONTREAL", "NIAGARA", "PORT", "POST ROAD", "RIVER", "ROCHESTER", "SCHODACK", "SELKIRK", "SOMERSET RR", _
+					"ST. LAWRENCE", "TRENTON", "WEST SHORE", "W&A", "ATLANTA SPECIAL INSTRUCTIONS", "A&WP", "ABBEVILLE", "ATLANTA TERMINAL", _
+					"BIRMINGHAM MINERAL", "BOYLES TERMINAL", "CAMAK", "CARTERSVILLE", "ETOWAH", "GAINSVILLE MIDLAND", "GEORGIA", "LINEVILLE", _
+					"M&M", "MANCHESTER", "NO&M", "PD", "S&NA SOUTH", "SELMA", "BALTIMORE SPECIAL INSTRUCTIONS", "BALTIMORE TERMINAL", "CAPITAL", _
+					"CUMBERLAND", "CUMBERLAND TERMINAL", "FAIRMONT", "GEORGES CREEK", "HANOVER", "HERBERT", "KEYSTONE", "LANDOVER", "LURGAN", _
+					"METROPOLITAN", "MON", "MOUNTAIN", "OLD MAIN LINE", "P&W", "PHILADELPHIA", "PITTSBURGH", "POPES CREEK", "RF&P", "S&C", "SHENANDOAH", _
+					"STONY RIVER", "THOMAS", "ELSDON", "CHICAGO SPECIAL INSTRUCTIONS", "ALTENHEIM", "BARR", "BLUE ISLAND", "CHICAGO HEIGHTS", "DETROIT", _
+					"FREMONT", "GARRETT", "GRAND RAPIDS", "GRAND RAPIDS TERMINAL", "LAKE", "LINCOLN", "MONON", "NEW ROCK", "PEMBERVILLE", "PLYMOUTH", _
+					"PORT HURON", "PORTER", "SAGINAW", "TOLEDO TERMINAL", "WOODLAND", "FLORENCE DIVISION SPECIAL INSTRUCTIONS", "ABERDEEN", "ANDREWS", _
+					"AUGUSTA", "BELLWOOD", "BELTON", "CHARLESTON", "CHARLOTTE", "CN&L", "COLUMBIA", "CRESTON", "CROSS", "EASTOVER", "GEORGETOWN", _
+					"HAMLET", "HAMLET TERMINAL", "HOPEWELL", "LANE", "MCCORMICK", "MONROE", "NORLINA", "NORTH END", "ORANGEBURG", "PARMELE", _
+					"PORTSMOUTH", "RICHMOND TERMINAL", "SOUTH END", "SPARTANBURG", "TARBORO", "TERRELL", "W&W", "WILMINGTON", "FLORENCEWS SPECIAL INSTRUCTIONS", _
+					"HIGHPOINT THOMASVILLE", "WINSTON SALEM SOUTHBOUND", "GREAT LAKES SPECIAL INSTRUCTIONS", "CL&W", "CLEVELAND SHORT LINE", "CLEVELAND", _
+					"CLEVELAND TERMINAL", "COLUMBUS", "CRAWFORDSVILLE BRANCH", "ERIE WEST", "FOSTORIA", "FRANKFORT SECONDARY", "GREENWICH", "INDIANAPOLIS LINE", _
+					"INDIANAPOLIS", "INDIANAPOLIS TERMINAL", "MT VICTORY", "NEW CASTLE", "NEWTON FALLS", "SCOTTSLAWN SECONDARY", "SHELBYVILLE SECONDARY", _
+					"ST LOUIS LINE", "TOLEDO BRANCH", "WILLARD", "WILLARD TERMINAL", "HUNTINGTON EAST SPECIAL INSTRUCTIONS", "ALLEGHANY", "BIG COAL", _
+					"BIG MARSH FORK", "BRIDGEPORT", "BUFFALO", "CABIN CREEK", "CINCINNATI", "COAL RIVER", "COLOMBUS", "G&E", "GAULEY", "ISLAND CREEK", _
+					"JAMES RIVER", "KANAWHA", "LAUREL FORK", "LOGAN & SOUTHERN", "LOGAN", "MARIETTA", "NEW RIVER", "NORTHERN", "OHIO RIVER", "PENINSULA", _
+					"PINE CREEK", "PINY CREEK", "POMEROY", "POND FORK", "RALEIGH SOUTHWESTERN & WINDING GULF", "RIVANNA", "RUPERT", "RUSSELL", "SETH", _
+					"SEWELL VALLEY", "SHORT LINE", "WEST FORK", "HUNTINGTON WEST SPECIAL INSTRUCTIONS", "BIG SANDY", "BLUE RIDGE", "CC", "COAL RUN", _
+					"CV", "E&BV", "EK", "KD", "KINGSPORT", "LONG FORK", "MIDDLE CREEK", "ROCKHOUSE", "SV&E", "BRUNSWICK", "JACKSONVILLE SPECIAL INSTRUCTIONS", _
+					"ACHAN", "AUBURNDALE", "BAINBRIDGE", "BONE VALLEY", "BREWSTER", "BROOKER", "BROOKSVILLE", "CALLAHAN", "CARTERS", _
+					"CENTRAL FLORIDA RAIL CORRIDOR (ORLANDO)", "CLEARWATER", "DEERHAVEN", "DOTHAN", "FITZGERALD", "HOMESTEAD", "JACKSONVILLE TERMINAL", _
+					"JESUP", "KINGSLAND", "LAKELAND", "MIAMI", "NAHUNTA", "P&A", "PALMETTO", "PLANT CITY", "SANFORD", "SAVANNAH", "TALLAHASSEE", _
+					"TAMPA TERMINAL", "THOMASVILLE", "VALRICO", "VITIS", "WILDWOOD", "YEOMAN", "LOUISVILLE SPECIAL INSTRUCTIONS", "CINCINNATI TERMINAL", _
+					"HOOSIER", "INDIANA", "LCL", "LH&STL", "LOUISVILLE TERMINAL", "MAINLINE", "MIDDLETOWN", "TOLEDO", _
+					"NASHVILLE SPECIAL INSTRUCTIONS", "BRUCETON", "CE&D", "CHATTANOOGA", "DANVILLE", "DECATUR", "EVANSVILLE TERMINAL", "HENDERSON", _
+					"ILLINOIS", "MEMPHIS", "MEMPHIS TERMINAL", "NASHVILLE", "NASHVILLE TERMINAL", "S&NA")
+				
+				subDivFileNumArray = Array("1470", "1469", "1177", "1176", "1175", "1174", "1173", "1172", "1171", "1170", "1169", "1168", "1167", "1166", _
+					"1165", "1164", "1163", "1162", "1161", "1160", "1159", "1158", "1157", "1156", "1155", "1154", "1153", "1152", "1151", "1544", "1197", _
+					"1196", "1195", "1194", "1193", "1192", "1191", "1190", "1189", "1188", "1187", "1186", "1185", "1184", "1183", "1182", "1181", "1180", _
+					"1222", "1221", "1220", "1219", "1218", "1217", "1216", "1215", "1214", "1213", "1212", "1211", "1210", "1209", "1208", "1207", "1206", _
+					"1205", "1204", "1203", "1202", "1201", "1200", "1199", "1198", "1545", "1248", "1247", "1246", "1245", "1244", "1243", "1242", "1241", _
+					"1240", "1239", "1238", "1237", "1236", "1235", "1234", "1233", "1232", "1231", "1230", "1228", "1227", "1423", "1422", "1421", "1420", _
+					"1419", "1418", "1417", "1416", "1415", "1414", "1413", "1412", "1411", "1410", "1409", "1408", "1407", "1406", "1405", "1404", "1403", _
+					"1402", "1401", "1400", "1399", "1398", "1397", "1396", "1395", "1394", "1393", "1392", "1252", "1251", "1250", "1275", "1274", "1273", _
+					"1272", "1271", "1270", "1269", "1268", "1267", "1266", "1265", "1264", "1263", "1262", "1261", "1260", "1259", "1258", "1257", "1256", _
+					"1255", "1254", "1253", "1363", "1362", "1361", "1360", "1359", "1358", "1357", "1356", "1355", "1354", "1353", "1352", "1351", "1350", _
+					"1349", "1348", "1347", "1346", "1345", "1344", "1343", "1342", "1341", "1340", "1339", "1338", "1337", "1336", "1335", "1334", "1333", _
+					"1332", "1331", "1330", "1329", "1377", "1376", "1375", "1374", "1373", "1372", "1371", "1370", "1369", "1368", "1367", "1366", "1365", _
+					"1364", "1432", "1309", "1308", "1307", "1306", "1305", "1304", "1303", "1302", "1301", "1300", "1299", "1298", "1297", "1296", "1295", _
+					"1294", "1293", "1292", "1291", "1290", "1289", "1288", "1287", "1286", "1285", "1284", "1283", "1282", "1281", "1280", "1279", "1278", _
+					"1277", "1276", "1320", "1319", "1318", "1317", "1315", "1314", "1313", "1312", "1311", "1310", "1391", "1390", "1389", "1388", "1387", _
+					"1386", "1385", "1384", "1383", "1382", "1381", "1380", "1379", "1378")
+					
+				Dim subDivDictionary
+				Set subDivDictionary = CreateObject("Scripting.Dictionary")
+				subDivDictionary.CompareMode = vbTextCompare
+
+				for k = 0 to UBound(subDivNameArray)
+					subDivDictionary.Add subDivNameArray(k), subDivFileNumArray(k)
+				Next
+			
+				Dim subDivURL
+				Dim subDivName
+				subDivName = userselections.subdivision.value				
+				formattedSubDivString = UCase(Trim(subDivName))
+				
+				if subDivDictionary.Exists(formattedSubDivString) Then
+					subDivURL = "https://intranet.xorail.com/secure/2003/Instructions/files/pdf/" & subDivDictionary.Item(formattedSubDivString) & ".pdf"
+					Set filesys = CreateObject("Scripting.FileSystemObject")
+					SaveURLTo = userselections.destinationPath.value & "\" & subDivName & " Sub.URL"
+					Set fso = CreateObject("Scripting.FileSystemObject")
+					If Not (fso.FileExists(SaveURLTo)) Then
+						Set WshShell = CreateObject("WScript.Shell")
+						Set oUrlLink = WshShell.CreateShortcut(SaveURLTo)
+						oUrlLink.TargetPath = subDivURL
+						oUrlLink.Save
+					End If
+					'PrintURL(subDivURL)
+				Else
+					MsgBox("""" & subDivName & """ is not correct. Check spelling and try again.")
+				End If
+			End Sub
+			
+			
+			Sub PrintURL(URL)		
+				On Error Resume Next
+				Dim oIE 
+				Const OLECMDID_PRINT = 6
+				Const OLECMDEXECOPT_DONTPROMPTUSER = 2
+				Const OLECMDEXECOPT_PROMPTUSER     = 1
+				Set oIE = CreateObject("InternetExplorer.Application")
+				oIE.Navigate URL
+				oIE.Visible = 1
+				Do while oIE.ReadyState <> 4
+					Delay(1)
+				Loop
+				oIE.ExecWB OLECMDID_PRINT, OLECMDEXECOPT_DONTPROMPTUSER
+			End Sub
+			
+			
+			Sub openRaildocsURL()
+				Set objShell = CreateObject("Wscript.Shell")
+				On Error Resume Next
+				objShell.Run "https://www.raildocs.net/CSXTrans/DgnProjTracking/EditProj.cgi?CSXProjNum=" & userselections.railroadNum.value & "#q=1"
+				If Err.Number <> 0 Then
+					MsgBox("To use this button, you must have Chrome installed.")
+					Err.Clear
+				End If
+				Set objShell = Nothing
+			End Sub
+			
+			
+			Sub checkJobID
+				If (userselections.JobID.value = "Tracking JobID") Then
+					userselections.TrackingBttn.disabled = True
+					Set objTxtArea = window.document.getElementById("StatusMsg")
+					objTxtArea.Value = """JobId"" is at the end of the tracking URL. Paste it into the ""Tracking JobID"" box." & VbCrLf
+					objTxtArea.scrollTop = objTxtArea.scrollHeight + objTxtArea.scrollTop
+					userselections.JobID.STYLE.backgroundcolor = "#FF7777"
+				Else
+					userselections.TrackingBttn.disabled = False
+					userselections.JobID.STYLE.backgroundcolor = "#FFFFFF"
+				End If
+			End Sub
+			
+			
+			Sub checkDivisionAndSub
+				DivBeginStr = InStr(1,ucase(userselections.division.value),"DIVISION")
+				SubdivBeginStr = InStr(1,ucase(userselections.subdivision.value),"SUBDIVISION")
+				If DivBeginStr > 0 Then
+					userselections.division.value = trim(left(userselections.division.value, DivBeginStr - 1))
+				Elseif SubdivBeginStr > 0 Then
+					userselections.subdivision.value = trim(left(userselections.subdivision.value, SubdivBeginStr - 1))
+				End If
+			End Sub
+			
+			
+			Function convertXRLnumberToJobID
+				'Dim http
+				'Set http = CreateObject("Microsoft.XMLHTTP")
+				'http.Open "GET", "Chrome https://intranet.xorail.com/secure/2003/Tracking/JobSearch/results.cfm?searchCount=8&searchFieldName_1=jobInfo_JobNum&searchText_1=" & userselections.xrlNum.value, False
+				'Delay(1)
+				'http.Send
+				convertXRLnumberToJobID = userselections.JobID.value'http.responseText
+				'MsgBox(http.responseText)
+				'set http = nothing
+			End Function
+			
+			
+			Sub openTrackingURL()
+				Set objShell = CreateObject("Wscript.Shell")
+				userselections.JobID.value = convertXRLnumberToJobID
+				On Error Resume Next 
+				objShell.Run "Chrome https://intranet.xorail.com/secure/2003/index.cfm?redirectSweMainFrame=https://intranet.xorail.com/secure/2003/tracking/JobInfo/index.cfm?JobID=" & userselections.JobID.value
+				If Err.Number <> 0 Then
+					MsgBox("To use this button, you must have a tracking ""JobID"" and Chrome installed.")
+					Err.Clear
+				End If
+				Set objShell = Nothing
+			End Sub
+			
+			
+		</SCRIPT>
+		<STYLE type=text/css>
+			P { FONT-SIZE: 12px ;
+				COLOR: white ;
+				FONT-FAMILY: arial; } 
+			span { FONT-SIZE: 12px ;
+				COLOR: white ;
+				FONT-FAMILY: arial; } 
+			.footer { FONT-SIZE: 9px ;
+				COLOR: white ;
+				FONT-FAMILY: arial ;
+				TEXT-ALIGN: right;}
+			#button1 {
+			  font-family: arial;
+			  font-size: 1em;}
+			  #button2 {
+			  font-family: arial;
+			  font-size: 1em;}
+		</STYLE>
+	</HEAD>
+	<BODY bgcolor=#6E6E6E>
+		<p>
+			<form name="userselections">
+				
+				&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<input type="radio" name="Railroad" value="CSX" checked onclick="GetRailroad">CSX
+				&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp<input type="radio" name="Railroad" value="NS" onclick="GetRailroad">NS<br>
+				<input type ="text" name ="destinationPath" size="74" title="Destination" disabled/><br><br>
+				<!--<input type ="button" value ="Browse for Info Worksheet File..." ID="ExcelInputFind" onClick="ChooseExcelInput" />&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp-->
+				<!--<input type ="button" value ="New Folder" ID="CreateNewFolder" onClick="CreateNewFolderSub" /><br>-->
+				<!--<input type ="text" name ="txtFile1" value="No info worksheet selected." size="74" title="ExcelInputPath" /><br><br>-->
+				<input type="text" name="prgrmrName" value="Programmer's Name" size="50" title="Programmer's Name (ex. Aaron Watkins)" />
+				&nbsp&nbsp&nbsp<input type="checkbox" name="rtvCheckBox" value="0">Reduced Test<br>
+				<input type="text" name="location" value="Location Name (ex. HAMILTON)" size="50" title="Location Name (ex. HAMILTON)" />&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+				<input type ="button" name="TrackingBttn" value ="Tracking" ID="Go to tracking." onClick="openTrackingURL" disabled/><br>
+				<input type="text" name="milePost" value="Mile Post (ex. CFG-55.80)" size="50" title="Mile Post (ex. CFG-55.80)" />&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+				<input type ="button" name="RaildocsBttn" value ="Raildocs" ID="Go to Raildocs Project Management" onClick="openRaildocsURL" /><br>
+				<input type="text" name="xrlNum" value="XRL# (ex. CWM13-32422)" size="50" title="XRL# (ex. CWM13-32422)" /><br>
+				<input type="text" name="railroadNum" value="Railroad# where files are on Raildocs" size="50" title="Railroad# (ex. VA2013007)" /><br>
+				<input type="text" name="division" value="Division" size="50" title="Division" onchange="checkDivisionAndSub"/><br>
+				<input type="text" name="subdivision" value="Subdivision" size="50" title="Subdivision" onchange="checkDivisionAndSub"/>
+				&nbsp&nbsp&nbsp&nbsp&nbsp
+				<select name="mailType" title="Type of Mail">
+					<option value="0" selected>Mail Template</option>
+					<option value="1">NET IDs</option>
+					<option value="2">In-service</option>
+					<option value="3">P Hours</option>
+					<option value="4">PK Hours</option>
+					<option value="5">RTVP Out</option>
+					<option value="6">Prelim Upload</option>
+					<option value="7">Final Upload</option>
+					<option value="8">Raildocs PSR</option>
+				</select><br>
+				<input type="text" name="subDivAbrv" value="Subdivision Abbreviation (ex. RR)" size="50" title="Subdivision Abbreviation (ex. RR)" />
+				&nbsp&nbsp&nbsp&nbsp&nbsp
+				<select name="boxType" title="Type of Equipment (ex. ElectrologIXS)" onChange="selectVisibility">
+					<option value="ElectroLogIXS" selected>ElectroLogIXS</option>
+					<option value="VHLC">VHLC</option>
+					<option value="HLC">HLC</option>
+					<option value="EC5">EC5</option>
+					<option value="EC4">EC4</option>
+					<option value="MLII">MLII</option>
+				</select><br>
+				<input type="text" name="rrEngnr" value="RR Engineer's Initials" size="50" title="RR Engineer's Initials" />
+				&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+				<select name="logicStationVersion" title="ACE Compiler Version">
+					<option value="1.10">4.7</option>
+					<option value="1.11">4.8</option>
+					<option value="1.12" selected>4.9</option>
+					<option value="2.1">5.1</option>
+					<option value="2.5">5.5</option>
+					<option value="2.8">5.8</option>
+				</select><br>
+				<input type="text" name="designer" value="Designer's Initials" size="50" title="Designer's Initials" />
+				&nbsp&nbsp&nbsp<input type="checkbox" name="binderCover" value="1" checked>Binder Cover<br>
+				<input type="text" name="sigRules" value="Singal Rules (ex. 1281 - 1298)" size="50" title="Singal Rules (ex. 1281 - 1298)" />
+				&nbsp&nbsp&nbsp<input type="checkbox" name="programmingChecklist" value="1" checked>Program Checklist<br>
+				<input type="text" name="prgrmrInitials" value="Programmer's Initials" size="50" title="Programmer's Initials" />
+				&nbsp&nbsp&nbsp<input type="checkbox" name="programmersNotes" value="1" checked>Program Notes<br>
+				<input type="text" name="startDate" value="Start Date (ex. 02/18/2014)" size="50" title="Start Date (ex. 02/18/2014)" /><br>
+				<input type ="text" name ="city" value="Location's City" size="50" title="Location's City" />&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+				<input type ="button" value ="Create Mail" ID="GenerateEmail" onClick="EmailCreation" /><br>
+				<input type="text" name="state" value="State Abbreviation (ex. VA)" size="50" title="State Abbreviation (ex. VA)" />&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+				<INPUT TYPE="button" onClick="Main" VALUE="Create Docs" ID="button1" /><br>
+				<input type ="text" name ="JobID" value="Tracking JobID" size="50" title="Tracking JobID" onchange="checkJobID"/><br><br>
+
+				<SPAN ID=FileListing style="background-color: #9999ff;" /></span>
+
+				<textarea rows="10" cols="56" id="StatusMsg"></textarea>
+				<div class="footer"><br>
+					XRL 03/03/2014
+				</div>
+			</form>
+		</p>
+	</BODY>
+</HTML>
